@@ -22,7 +22,7 @@ healing-report.json
 healing-report.json.log
 
 # Claim number handed from the claim creation spec to the payment spec
-# test-data/created-claim.json
+test-data/created-claim.json
 
 # Policy number handed from the PolicyCenter spec to the claim creation spec
 test-data/created-policy.json
