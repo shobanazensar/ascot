@@ -1,0 +1,50 @@
+{
+  "TC00011": {
+    "Search First Name": "Ray",
+    "Claimant": "Ray Newton",
+    "Loss Date": "current date minus 1 day",
+    "Loss Cause": "Collision with motor vehicle",
+    "Location": "Any valid selectable location from the Location dropdown",
+    "Claim reference": "000-00-000030"
+  },
+  "TC00001": {
+    "Underwriter user": "Test User",
+    "Account ID": "ACCT-TEST-00001",
+    "Existing account name": "Test Account One",
+    "Product": "Personal Auto"
+  },
+  "TC00003": {
+    "Driver source account": "test",
+    "Submission type": "Personal Auto",
+    "User role": "Underwriter"
+  },
+  "TC00005": {
+    "Account Number": "ACCT-TEST-00001",
+    "Driver Source Account": "test",
+    "Submission Type": "Personal Auto",
+    "Coverage Set": "Mexico Coverage"
+  },
+  "TC00006": {
+    "Account ID": "ACCT-TEST-00001",
+    "Vehicle VIN": "1234567890abcdefg",
+    "License State": "New York",
+    "Code": "2000"
+  },
+  "TC00009": {
+    "Existing account number": "ACCT-TEST-00001",
+    "Driver source account": "test",
+    "Vehicle VIN": "1234567890abcdefg",
+    "Vehicle License State": "New York",
+    "Vehicle Code": "2000"
+  },
+  "TC00012": {
+    "Account ID": "ACCT-TEST-00001",
+    "Submission ID": "SUB-TEST-00001",
+    "Driver source account": "ACCT-TEST-DRIVER-00001",
+    "Vehicle VIN": "1234567890abcdefg",
+    "License State": "New York",
+    "Vehicle Code": "2000",
+    "Coverage to remove": "Mexico coverage",
+    "Remaining coverage set": "Coverage Alpha, Coverage Beta, Coverage Gamma"
+  }
+}

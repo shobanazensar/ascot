@@ -1,0 +1,100 @@
+{
+  "testCaseId": "TC00010",
+  "title": "Personal Auto rating: quote, edit and re-quote, validating every premium and the total cost",
+  "source": {
+    "workbook": "PA_Rating_Actuarial_Calculator_v2.xlsx",
+    "rateBook": "PA RTM Demo Rating (Edition 3)",
+    "notes": [
+      "Term amounts are 6-month amounts: base rate x 1.5 (min of vehicle cost / type factor) x 1.25 (driver age factor, vehicle-level coverages only).",
+      "Written premium = term amount x 2.0055 (365 / 182 days, 12-month policy on a 6-month rated term). Mexico is flat and not prorated.",
+      "Line-level written premiums round to the nearest dollar; vehicle-level ones (Comprehensive, Collision, Towing, Rental) round UP, as PolicyCenter does. The workbook's Rating Worksheet column AD rounds every coverage to the nearest dollar, which gives Towing 58 and Rental 76 instead of 59 and 77.",
+      "State tax = 7.25% (CA) of total written premium, rounded to whole dollars."
+    ]
+  },
+  "presentation": {
+    "enabled": true,
+    "typingDelayMs": 120,
+    "pauseAfterInputMs": 600,
+    "pauseAfterValidationMs": 5000
+  },
+  "policy": {
+    "termType": "Annual",
+    "effectiveDate": "12/01/2026",
+    "expirationDate": "12/01/2027",
+    "uwCompany": "Acme Medium Hazard Insurance",
+    "state": "California"
+  },
+  "drivers": [
+    { "type": "existing", "name": "John Smith", "age": 46, "percent": "70" },
+    {
+      "type": "new", "name": "Emma Smith", "age": 19, "percent": "30",
+      "firstName": "Emma", "lastName": "Smith", "dateOfBirth": "06/15/2007",
+      "licenseNumber": "D1234567", "licenseState": "California", "yearFirstLicensed": "2023",
+      "addressLine1": "1021 O Street", "city": "Sacramento", "state": "California", "zip": "95814", "addressType": "Home"
+    }
+  ],
+  "vehicle": {
+    "vin": "1234567890ABCDEFG",
+    "year": "2023",
+    "make": "Toyota",
+    "model": "Avalon",
+    "costNew": "28000",
+    "licenseState": "California",
+    "garagedAt": "2: 1021 O Street, Sacramento, CA",
+    "primaryUse": "Pleasure",
+    "passiveRestraint": "No",
+    "antiTheft": "None"
+  },
+  "coverages": [
+    { "coverage": "Liability - Bodily Injury and Property Damage", "level": "line", "selected": true, "value": "25/50/25" },
+    { "coverage": "Medical Payments", "level": "line", "selected": true, "value": "10,000" },
+    { "coverage": "Uninsured Motorist - Bodily Injury", "level": "line", "selected": true, "value": "15/30" },
+    { "coverage": "Uninsured Motorist - Property Damage", "level": "line", "selected": true, "note": "California fixes the limit at 3,500" },
+    { "coverage": "Mexico Coverage - Limited", "level": "line", "selected": true, "note": "On by default; removed by the edit" },
+    { "coverage": "Comprehensive", "level": "vehicle", "selected": true, "value": "500" },
+    { "coverage": "Collision", "level": "vehicle", "selected": true, "value": "500" },
+    { "coverage": "Towing and Labor", "level": "vehicle", "selected": true, "value": "100" },
+    { "coverage": "Rental Reimbursement", "level": "vehicle", "selected": true, "value": "30 days x 25/day" }
+  ],
+  "initialQuote": {
+    "description": "All coverages selected, including Mexico Coverage - Limited",
+    "expected": {
+      "totalPremium": 1597.00,
+      "taxes": 116.00,
+      "totalCost": 1713.00,
+      "coverages": {
+        "Liability - Bodily Injury and Property Damage Coverage": { "termAmount": 294.00, "premium": 590.00 },
+        "Medical Payments Coverage": { "termAmount": 75.00, "premium": 150.00 },
+        "Uninsured Motorist - Bodily Injury Coverage": { "termAmount": 46.00, "premium": 92.00 },
+        "Uninsured Motorist - Property Damage Coverage": { "termAmount": 20.00, "premium": 40.00 },
+        "Mexico Coverage - Limited Coverage": { "termAmount": 15.00, "premium": 15.00 },
+        "Comprehensive Coverage": { "termAmount": 107.00, "premium": 215.00 },
+        "Collision Coverage": { "termAmount": 179.00, "premium": 359.00 },
+        "Towing and Labor Coverage": { "termAmount": 29.00, "premium": 59.00 },
+        "Rental Reimbursement Coverage": { "termAmount": 38.00, "premium": 77.00 }
+      }
+    }
+  },
+  "edit": {
+    "description": "Edit Policy Transaction: remove Mexico Coverage - Limited, keep every other coverage",
+    "changes": [
+      { "coverage": "Mexico Coverage - Limited", "level": "line", "selected": false }
+    ],
+    "expected": {
+      "totalPremium": 1582.00,
+      "taxes": 115.00,
+      "totalCost": 1697.00,
+      "removedCoverages": ["Mexico Coverage - Limited Coverage"],
+      "coverages": {
+        "Liability - Bodily Injury and Property Damage Coverage": { "termAmount": 294.00, "premium": 590.00 },
+        "Medical Payments Coverage": { "termAmount": 75.00, "premium": 150.00 },
+        "Uninsured Motorist - Bodily Injury Coverage": { "termAmount": 46.00, "premium": 92.00 },
+        "Uninsured Motorist - Property Damage Coverage": { "termAmount": 20.00, "premium": 40.00 },
+        "Comprehensive Coverage": { "termAmount": 107.00, "premium": 215.00 },
+        "Collision Coverage": { "termAmount": 179.00, "premium": 359.00 },
+        "Towing and Labor Coverage": { "termAmount": 29.00, "premium": 59.00 },
+        "Rental Reimbursement Coverage": { "termAmount": 38.00, "premium": 77.00 }
+      }
+    }
+  }
+}

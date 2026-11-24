@@ -1,0 +1,26 @@
+{
+  "configId": "config-1794233572244-8vwh4fwiu",
+  "app": "playwright-typescript-test-script-1794233572114",
+  "project": "playwright-typescript-test-script-1794233572114",
+  "url": "https://cc-dev-gwcpdev.zensar.zeta1-andromeda.guidewire.net/ClaimCenter.do",
+  "appUrl": "https://cc-dev-gwcpdev.zensar.zeta1-andromeda.guidewire.net/ClaimCenter.do",
+  "framework": "Playwright",
+  "language": "TypeScript",
+  "testType": "Web UI",
+  "mode": "test-script",
+  "testTypes": [
+    "Web UI"
+  ],
+  "locatorStrategy": "Application UI",
+  "locatorAppUrl": "https://cc-dev-gwcpdev.zensar.zeta1-andromeda.guidewire.net/ClaimCenter.do",
+  "locatorUsername": "su",
+  "locatorPassword": "gw",
+  "pipeline": null,
+  "flowPreview": null,
+  "reports": [
+    "HTML"
+  ],
+  "outputDir": "/Users/s.sathyanathan/ZenseQI/latestversion/zense-ai-qi-demo/agents/auto-playpilot/autopilot-ui/generated-projects/playwright-typescript-test-script-1794233572114",
+  "tenantId": "be4aceaf-3b76-41ee-90e0-0ef46184a3e0",
+  "generatedAt": "2026-11-09T14:13:40.766Z"
+}
