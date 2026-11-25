@@ -5,8 +5,25 @@ import { HealSpec, candidatesFor, heal, healLocator, primaryFor } from '../utils
 export class ClaimcenterPage extends BasePage {
   readonly url = "https://cc-dev-gwcpdev.zensar.zeta1-andromeda.guidewire.net/ClaimCenter.do";
 
+  // Presentation mode (off by default): banners at the main steps, held on screen for pauseAfterBannerMs
+  private presentation = { enabled: false, pauseAfterBannerMs: 0 };
+
   constructor(page: Page) {
     super(page);
+  }
+
+  setPresentation(options: Partial<{ enabled: boolean; pauseAfterBannerMs: number }>): void {
+    this.presentation = { ...this.presentation, ...options };
+  }
+
+  get presentationEnabled(): boolean { return this.presentation.enabled; }
+
+  /** Shows a banner (presentation mode only), holds it on screen, then removes it. */
+  async showBanner(title: string, lines: string[], passed = true): Promise<void> {
+    if (!this.presentation.enabled) return;
+    await this.drawBanner(title, lines, passed);
+    await this.page.waitForTimeout(this.presentation.pauseAfterBannerMs);
+    await this.removeBanner();
   }
 
   async goto(url?: string): Promise<void> {
@@ -121,6 +138,19 @@ export class ClaimcenterPage extends BasePage {
   }
 
   /**
+   * Step 1, after searching by Policy #: the insured and the term of the policy in the results list
+   * (the row reads "Select <policy #> <insured> <address> <effective> <expiration> <type>").
+   */
+  async readPolicySearchResult(policyNumber: string): Promise<{ text: string; effectiveDate: string; expirationDate: string }> {
+    const row = this.page.getByRole('row', { name: /^(Select|Unselect) / }).filter({ hasText: policyNumber }).first();
+    await row.waitFor({ state: 'visible' });
+    const text = (await row.innerText()).replace(/\s+/g, ' ').trim();
+    const [effectiveDate, expirationDate] = text.match(/\d{2}\/\d{2}\/\d{4}/g) ?? [];
+    if (!effectiveDate || !expirationDate) throw new Error(`Could not read the policy term from the search result "${text}"`);
+    return { text, effectiveDate, expirationDate };
+  }
+
+  /**
    * Step 1: in the results list (which can span several pages) select the policy with the given
    * Policy # and Effective Date (MM/dd/yyyy).
    */
@@ -210,6 +240,74 @@ export class ClaimcenterPage extends BasePage {
     await (await heal('vehicleDetails.selectVehicle', this.page, { role: 'combobox', name: 'Select vehicle' })).selectOption({ label: vehicle });
     await (await heal('vehicleDetails.ok', this.page, { role: 'button', name: 'OK', exact: true })).click();
     await this.waitStepHeading(3);
+  }
+
+  /** Step 3 without Next: Loss Cause, Location (the insured's address) and optionally the Fault Rating. */
+  async fillLossDetails(lossCause: string, faultRating?: string): Promise<void> {
+    await (await heal('claimInfo.lossCause', this.page, { role: 'combobox', name: 'Loss Cause', exact: true })).selectOption({ label: lossCause });
+    await (await heal('claimInfo.location', this.page, { role: 'combobox', name: 'Location', exact: true })).selectOption({ index: 1 });
+    if (faultRating) {
+      await (await heal('claimInfo.faultRating', this.page, { role: 'combobox', name: 'Fault Rating', exact: true })).selectOption({ label: faultRating });
+    }
+  }
+
+  /**
+   * Step 3: "Add Vehicle" and return the vehicles listed on the policy (the "Select vehicle" options without
+   * "(Newly Created)"). Stays on Vehicle Details: follow with chooseVehicle() or cancelVehicleDetails().
+   */
+  async listPolicyVehicles(): Promise<string[]> {
+    await (await heal('claimInfo.addVehicle', this.page, { role: 'button', name: 'Add Vehicle' })).click();
+    await heal('vehicleDetails.heading', this.page, { role: 'heading', name: 'Vehicle Details', level: 1 });
+    const select = await heal('vehicleDetails.selectVehicle', this.page, { role: 'combobox', name: 'Select vehicle' });
+    return (await select.locator('option').allInnerTexts()).map((o) => o.trim()).filter((o) => o && o !== '<none>' && !/Newly Created/i.test(o));
+  }
+
+  /** Vehicle Details: pick the vehicle and click OK to come back to step 3. */
+  async chooseVehicle(vehicle: string): Promise<void> {
+    await (await heal('vehicleDetails.selectVehicle', this.page, { role: 'combobox', name: 'Select vehicle' })).selectOption({ label: vehicle });
+    await (await heal('vehicleDetails.ok', this.page, { role: 'button', name: 'OK', exact: true })).click();
+    await this.waitStepHeading(3);
+  }
+
+  /** Vehicle Details: Cancel, back to step 3 without adding a vehicle. */
+  async cancelVehicleDetails(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Cancel', exact: true }).first().click();
+    await this.waitStepHeading(3);
+  }
+
+  /** Step 3: Next (after fillLossDetails / chooseVehicle). */
+  async nextFromClaimInfo(): Promise<void> {
+    await this.clickWizardNext();
+    await this.waitStepHeading(4);
+  }
+
+  /**
+   * Step 1 by Policy #, without failing when nothing matches: searches and returns the policy's insured and term, or
+   * null when the search finds no policy with that number.
+   */
+  async findPolicyByNumber(policyNumber: string, timeoutMs = 20_000): Promise<{ text: string; effectiveDate: string; expirationDate: string } | null> {
+    const policyNumberBox = await healLocator('policySearch.policyNumber', [
+      this.page.locator('input[name$="FindPolicyPanelSet-policyNumber"]'),
+      this.page.getByRole('textbox', { name: 'Policy #' }),
+      this.page.getByLabel('Policy #'),
+    ]);
+    await policyNumberBox.fill(policyNumber);
+    await (await heal('policySearch.searchButton', this.page, { role: 'button', name: 'Search', exact: true })).click();
+    const row = this.page.getByRole('row', { name: /^(Select|Unselect) / }).filter({ hasText: policyNumber }).first();
+    const found = await row.waitFor({ state: 'visible', timeout: timeoutMs }).then(() => true, () => false);
+    return found ? this.readPolicySearchResult(policyNumber) : null;
+  }
+
+  /** New Claim wizard: Cancel (and confirm), discarding the draft claim. */
+  async cancelNewClaimWizard(): Promise<void> {
+    // ClaimCenter asks for confirmation with a browser confirm() dialog
+    const accept = (d: import('@playwright/test').Dialog) => d.accept().catch(() => {});
+    this.page.once('dialog', accept);
+    await this.wizardToolbar.getByRole('button', { name: 'Cancel', exact: true }).click();
+    const ok = this.page.getByRole('button', { name: 'OK', exact: true });
+    if (await ok.isVisible({ timeout: 2000 }).catch(() => false)) await ok.click();
+    await expect(this.page.getByRole('heading', { name: /^Step \d( of 5)?:/ })).toHaveCount(0);
+    this.page.off('dialog', accept);
   }
 
   /** Step 4: Services (nothing required), then Next. */
@@ -380,11 +478,36 @@ export class ClaimcenterPage extends BasePage {
     return heal(`check.step${n}Heading`, this.page, { role: 'heading', name: new RegExp(`^Step ${n} of 3:`) });
   }
 
-  /** Claim left menu > Financials > Transactions. */
+  /**
+   * Claim left menu > Financials > Transactions, showing all transaction types. The page remembers the last filter
+   * (e.g. "Reserves" after creating a reserve, "Payments" after filtering), and a filtered list has no Type column.
+   */
   async openTransactions(): Promise<void> {
     await (await heal('claimMenu.financials', this.page, { role: 'menuitem', name: 'Financials', exact: true })).click();
     await (await heal('claimMenu.transactions', this.page, { role: 'menuitem', name: 'Transactions', exact: true })).click();
     await heal('transactions.heading', this.page, { role: 'heading', name: /Transactions/, level: 1 });
+    await this.selectTransactionsFilter('All transaction types');
+  }
+
+  /** The "All transaction types / Reserves / Payments ..." dropdown on Financials: Transactions. */
+  private get transactionsFilter(): Locator {
+    return this.page.getByRole('combobox').filter({ has: this.page.locator('option', { hasText: 'All transaction types' }) }).first();
+  }
+
+  /**
+   * Selects a Transactions filter and makes sure it sticks. Each change reloads the list, and a change made while a
+   * previous reload is still running is overwritten by it, so re-check after the list has settled and select again.
+   */
+  private async selectTransactionsFilter(kind: string): Promise<void> {
+    await this.transactionsFilter.waitFor({ state: 'visible' });
+    const selected = () => this.transactionsFilter.evaluate((el: HTMLSelectElement) => el.selectedOptions[0]?.label ?? '');
+    await expect(async () => {
+      if ((await selected()) !== kind) {
+        await this.transactionsFilter.selectOption({ label: kind });
+        await this.page.waitForTimeout(1500); // let the list reload
+      }
+      expect(await selected()).toBe(kind);
+    }).toPass({ timeout: 60_000 });
   }
 
   /** The Status cell of the first transaction of the given type (Reserve / Payment ...) on Financials: Transactions. */
@@ -404,7 +527,7 @@ export class ClaimcenterPage extends BasePage {
       actual = await this.transactionStatus(type);
       if (typeof status === 'string') expect(actual).toBe(status);
       else expect(actual).toMatch(status);
-    }).toPass();
+    }).toPass({ timeout: 60_000 });
     return actual;
   }
 
@@ -432,21 +555,26 @@ export class ClaimcenterPage extends BasePage {
   async enterCheckPaymentAndNext(
     paymentType: string,
     amount: string,
-    options: { reserveLineNumber?: number; applyDeductible?: boolean } = {},
+    options: { reserveLineNumber?: number; reserveLineName?: string; applyDeductible?: boolean } = {},
   ): Promise<void> {
-    const { reserveLineNumber = 1, applyDeductible = true } = options;
+    const { reserveLineNumber = 1, reserveLineName, applyDeductible = true } = options;
     // Changing a dropdown makes ClaimCenter refresh the form (re-selecting the same reserve line even clears the
     // payment type and cost type/category that were already filled in), so only change what is not already selected.
     const reserveLine = await heal('check.reserveLine', this.page, { role: 'combobox', name: 'Reserve Line' });
-    // The list is "<none>" (only when no line is preselected), the real reserve lines, then "New...".
+    // The list is "<none>" (only when no line is preselected), the real reserve lines, then "New...". A line reads like
+    // "(1) 1st Party Vehicle - TEST ACCOUNT; Expense - A&O/Vehicle inspection". With reserveLineName the line whose label
+    // contains it is used (a claim can have several lines, e.g. Auto body and Vehicle inspection), otherwise line number n.
     const wanted = await reserveLine.evaluate(
-      (el: HTMLSelectElement, n: number) => {
+      (el: HTMLSelectElement, args: { n: number; name?: string }) => {
         const lines = Array.from(el.options).filter((o) => o.label !== '<none>' && o.label !== 'New...');
-        return { label: lines[n - 1]?.label ?? '', selected: el.selectedOptions[0]?.label ?? '' };
+        const line = args.name ? lines.find((o) => o.label.includes(args.name!)) : lines[args.n - 1];
+        return { label: line?.label ?? '', selected: el.selectedOptions[0]?.label ?? '', all: lines.map((o) => o.label) };
       },
-      reserveLineNumber,
+      { n: reserveLineNumber, name: reserveLineName },
     );
-    if (!wanted.label) throw new Error(`The Reserve Line list has no reserve line number ${reserveLineNumber}`);
+    if (!wanted.label) {
+      throw new Error(`The Reserve Line list has no ${reserveLineName ? `line "${reserveLineName}"` : `reserve line number ${reserveLineNumber}`}: ${wanted.all.join(' | ')}`);
+    }
     if (wanted.selected !== wanted.label) await reserveLine.selectOption({ label: wanted.label });
     const paymentTypeSelect = await heal('check.paymentType', this.page, { role: 'combobox', name: 'Payment Type' });
     // Select the payment type and make sure it sticks: the form refreshes after the other fields change and can
@@ -457,7 +585,7 @@ export class ClaimcenterPage extends BasePage {
         if (current !== paymentType) await paymentTypeSelect.selectOption({ label: paymentType });
         await this.page.waitForTimeout(500);
         expect(await paymentTypeSelect.evaluate((el: HTMLSelectElement) => el.selectedOptions[0]?.label ?? '')).toBe(paymentType);
-      }).toPass();
+      }).toPass({ timeout: 60_000 });
     };
     await ensurePaymentType();
     const amountField = await healLocator('check.lineItemAmount', [
@@ -474,11 +602,7 @@ export class ClaimcenterPage extends BasePage {
 
   /** Financials: Transactions: filter the list with the "All transaction types" dropdown (Payments, Reserves ...). */
   async filterTransactions(kind: string): Promise<void> {
-    const filter = await healLocator('transactions.typeFilter', [
-      this.page.getByRole('combobox').first(),
-      this.page.locator('select').first(),
-    ]);
-    await filter.selectOption({ label: kind });
+    await this.selectTransactionsFilter(kind);
   }
 
   /**
@@ -495,11 +619,16 @@ export class ClaimcenterPage extends BasePage {
         // cells: Scheduled Send Date, Issue Date, Amount, View details, Exposure, Coverage, Cost Type, Cost Category, Status ...
         expect((await rows.nth(i).getByRole('cell').nth(8).innerText()).trim(), `status of payment ${i + 1}`).toBe(status);
       }
-    }).toPass();
+    }).toPass({ timeout: 60_000 });
   }
 
   /** Claim left menu > Financials > Summary. */
   async openFinancialsSummary(): Promise<void> {
+    // The Financials submenu (Summary, Transactions ...) only shows once Financials is expanded
+    if ((await this.page.getByRole('menuitem', { name: 'Transactions', exact: true }).count()) === 0) {
+      await (await heal('claimMenu.financials', this.page, { role: 'menuitem', name: 'Financials', exact: true })).click();
+      await this.page.getByRole('menuitem', { name: 'Transactions', exact: true }).first().waitFor({ state: 'visible' });
+    }
     const summary = await healLocator('claimMenu.financialsSummary', [
       // the first "Summary" is the claim's own, the second one is under Financials
       this.page.getByRole('menuitem', { name: 'Summary', exact: true }).nth(1),
@@ -509,9 +638,89 @@ export class ClaimcenterPage extends BasePage {
     await heal('financialsSummary.heading', this.page, { role: 'heading', name: 'Financials: Summary', level: 1 });
   }
 
+  /**
+   * Financials: Summary: the Remaining Reserves and Total Paid of a reserve line (e.g. "Vehicle inspection USD"), in cents.
+   * The summary is a tree of nested rows (claim > exposure > cost type > reserve line), so the last row that contains the
+   * line's name is the line itself. Empty cells and "-" read as 0.
+   */
+  async readReserveLine(reserveLine: string): Promise<{ remaining: number; paid: number } | null> {
+    // The table is drawn with the page; once its Claim Total row shows, a missing line really is missing
+    await this.page.getByRole('row').filter({ hasText: 'Claim Total' }).first().waitFor({ state: 'visible' }).catch(() => {});
+    const row = this.page.getByRole('row').filter({ hasText: reserveLine }).last();
+    if ((await row.count()) === 0) return null;
+    const cents = async (column: string): Promise<number> => {
+      const text = ((await row.locator(`[id$="${column}_Cell"]`).last().innerText()) ?? '').trim();
+      const m = text.match(/-?\$?\s*([\d,]+(?:\.\d{1,2})?)/);
+      return m ? Math.round(parseFloat(m[1].replace(/,/g, '')) * 100) : 0;
+    };
+    return { remaining: await cents('RemainingReserves'), paid: await cents('TotalPayments') };
+  }
+
+  /**
+   * Exposures > select the exposure > Create Reserve, then on Edit Reserves set the New Available Reserves of the
+   * exposure's cost type / cost category line to `amount` and Save. An existing line is updated; otherwise the blank
+   * new line at the bottom is filled in (Exposure, Cost Type, Cost Category).
+   */
+  async setReserve(opts: { exposureType: string; exposure: string; costType: string; costCategory: string; amount: string }): Promise<void> {
+    // exposureType is the Type shown on the Exposures list ("Vehicle"); exposure is how Edit Reserves names it ("1st Party Vehicle")
+    await this.openExposures();
+    const exposureRow = this.page.getByRole('row').filter({ has: this.page.getByRole('link', { name: opts.exposureType, exact: true }) }).last();
+    const hasExposure = await exposureRow.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false);
+    if (!hasExposure) throw new Error(`The claim has no "${opts.exposureType}" exposure to put a reserve on`);
+    await exposureRow.getByRole('checkbox').first().click();
+    await (await heal('exposures.createReserve', this.page, { role: 'button', name: 'Create Reserve', exact: true })).click();
+    await heal('editReserves.heading', this.page, { role: 'heading', name: 'Edit Reserves', level: 1 });
+
+    // Existing lines show Exposure / Cost Type / Cost Category as text; the blank new line has dropdowns, whose option
+    // lists contain every category name, so it (and the table rows around it) must not count as an existing line
+    const lineRows = this.page.getByRole('row')
+      .filter({ has: this.page.locator('[name$="-NewAmount"]') })
+      .filter({ hasNot: this.page.locator('select') });
+    const existing = lineRows.filter({ hasText: opts.costCategory }).filter({ hasText: opts.exposure });
+    let amountBox: Locator;
+    if (await existing.count()) {
+      amountBox = existing.last().locator('[name$="-NewAmount"]');
+    } else {
+      // The blank line: pick each dropdown by (partial) label; every change refreshes the row, so re-find it each time
+      const choose = async (suffix: string, wanted: string) => {
+        const select = this.page.locator(`select[name*="EditableReservesLV-"][name$="-${suffix}"]`).last();
+        const label = await select.evaluate((el: HTMLSelectElement, w: string) =>
+          Array.from(el.options).map((o) => o.label).find((l) => l === w) ?? Array.from(el.options).map((o) => o.label).find((l) => l.includes(w)) ?? '', wanted);
+        if (!label) throw new Error(`Edit Reserves: no "${wanted}" in the ${suffix} list: ${(await select.locator('option').allInnerTexts()).join(' | ')}`);
+        await select.selectOption({ label });
+        await expect(this.page.locator(`select[name*="EditableReservesLV-"][name$="-${suffix}"]`).last()).toHaveValue(/.+/);
+        await this.page.waitForTimeout(800); // the row re-renders after each change
+      };
+      await choose('Exposure', opts.exposure);
+      await choose('CostType', opts.costType);
+      await choose('CostCategory', opts.costCategory);
+      amountBox = this.page.locator('input[name*="EditableReservesLV-"][name$="-NewAmount"]').last();
+    }
+    await amountBox.fill(opts.amount);
+    await amountBox.press('Tab');
+    const heading = this.page.getByRole('heading', { name: 'Edit Reserves', level: 1 });
+    const save = async () => (await heal('editReserves.save', this.page, { role: 'button', name: 'Save', exact: true })).click();
+    await save();
+    // Either the page closes, or a warning (e.g. coverage in question) keeps it open and Save again accepts it.
+    // A validation error (e.g. "Missing required field") also keeps it open: fail with ClaimCenter's message.
+    const warnings = this.page.getByRole('heading', { name: 'Warnings:', level: 2 });
+    const errors = this.page.getByRole('heading', { name: /^Errors?:/ });
+    await expect(async () => {
+      expect(!(await heading.isVisible()) || (await warnings.first().isVisible()) || (await errors.first().isVisible())).toBe(true);
+    }).toPass({ timeout: 30_000 });
+    if (await errors.first().isVisible().catch(() => false)) {
+      const message = (await this.page.getByRole('main').innerText()).match(/Errors?:[\s\S]{0,400}/)?.[0] ?? 'unknown error';
+      throw new Error(`Edit Reserves could not be saved: ${message.replace(/\s+/g, ' ')}`);
+    }
+    if (await heading.isVisible()) await save();
+    await expect(heading).toBeHidden();
+  }
+
   /** Financials: Summary: open the dropdown of a reserve line (e.g. "Vehicle inspection USD") and click "Create Check". */
   async createCheckFromSummary(reserveLine: string): Promise<void> {
-    const row = this.page.getByRole('row').filter({ hasText: reserveLine }).first();
+    // The summary is a tree of nested rows, so the outer (claim / exposure) rows also contain the line's name and have
+    // options menus of their own: the last matching row is the reserve line itself
+    const row = this.page.getByRole('row').filter({ hasText: reserveLine }).last();
     await this.openOptionsMenu(await healLocator('financialsSummary.reserveOptions', [row.getByRole('button', { name: 'options' })]));
     await (await heal('financialsSummary.createCheck', this.page, { role: 'menuitem', name: 'Create Check' })).click();
     await this.checkStepHeading(1);
@@ -565,7 +774,7 @@ export class ClaimcenterPage extends BasePage {
     // Wait until the wizard either closed (no warning) or is showing the warning.
     await expect(async () => {
       expect((await warnings.first().isVisible()) || !(await step3.isVisible())).toBe(true);
-    }).toPass();
+    }).toPass({ timeout: 60_000 });
     if (await step3.isVisible()) await this.finishClaim();
     await expect(step3).toBeHidden();
   }

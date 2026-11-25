@@ -1,0 +1,55 @@
+{
+  "testCaseId": "TC00009",
+  "title": "Claim creation on an existing policy up to payments",
+  "presentation": {
+    "enabled": true,
+    "slowMoMs": 300,
+    "pauseAfterBannerMs": 3000,
+    "note": "Headed demo: banners at the main steps, held pauseAfterBannerMs; slowMoMs is a short delay before every click and keystroke. PRESENTATION=off turns both off."
+  },
+  "policy": {
+    "insured": "TEST ACCOUNT",
+    "candidates": [
+      {
+        "policyNumber": "9875792623",
+        "note": "Personal Auto, New York, 11/06/2026 - 05/06/2027"
+      },
+      {
+        "policyNumber": "7606217376",
+        "note": "Personal Auto, California, 11/17/2026 - 05/17/2027"
+      },
+      {
+        "policyNumber": "3668999178",
+        "note": "Personal Auto, California, 11/20/2026 - 11/20/2027"
+      }
+    ],
+    "note": "Tried in order: the first one that is found, belongs to the insured, is in force on the loss date and lists a vehicle is used. CC_POLICY_NUMBER puts another policy first. A candidate may set \"vehicle\"; otherwise the first vehicle on the policy is used."
+  },
+  "claim": {
+    "howReported": "Phone",
+    "reporter": "TEST ACCOUNT",
+    "relationToInsured": "Self/Insured",
+    "lossCause": "Collision with motor vehicle",
+    "faultRating": "Other party at fault"
+  },
+  "incident": {
+    "driver": "John Smith",
+    "damageDescription": "details",
+    "lossOccurred": "At premises",
+    "relationToOwner": "Self/Insured"
+  },
+  "reserve": {
+    "exposureType": "Vehicle",
+    "exposure": "1st Party Vehicle",
+    "costType": "Expense - A&O",
+    "costCategory": "Vehicle inspection",
+    "amount": 500,
+    "note": "The reserve the payments are made from. ClaimCenter normally creates it with the Vehicle exposure; if the claim has none (or less than the payment), the test sets it to this amount. CC_RESERVE_CATEGORY uses another cost category."
+  },
+  "payment": {
+    "payee": "TEST ACCOUNT",
+    "type": "Partial",
+    "amount": 300,
+    "note": "One check of this amount from the reserve line; the reserve goes down by the same amount."
+  }
+}
