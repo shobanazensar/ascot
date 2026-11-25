@@ -9,6 +9,8 @@ export type PresentationOptions = {
   typingDelayMs: number;
   pauseAfterInputMs: number;
   pauseAfterValidationMs: number;
+  // false: values are filled in one go (still highlighted) instead of typed key by key
+  typeKeyByKey: boolean;
 };
 
 // Per-vehicle coverage rows on PA Coverages, in screen order
@@ -21,7 +23,7 @@ const VEHICLE_COVERAGE_INDEX: Record<string, number> = {
 
 export class PolicycenterPage extends BasePage {
   readonly url = "https://pc-dev-gwcpdev.zensar.zeta1-andromeda.guidewire.net/PolicyCenter.do";
-  private presentation: PresentationOptions = { enabled: false, typingDelayMs: 0, pauseAfterInputMs: 0, pauseAfterValidationMs: 0 };
+  private presentation: PresentationOptions = { enabled: false, typingDelayMs: 0, pauseAfterInputMs: 0, pauseAfterValidationMs: 0, typeKeyByKey: true };
 
   constructor(page: Page) {
     super(page);
@@ -52,8 +54,12 @@ export class PolicycenterPage extends BasePage {
       return;
     }
     await this.spotlight(target, true);
-    await target.fill("");
-    await target.pressSequentially(value, { delay: this.presentation.typingDelayMs });
+    if (this.presentation.typeKeyByKey) {
+      await target.fill("");
+      await target.pressSequentially(value, { delay: this.presentation.typingDelayMs });
+    } else {
+      await target.fill(value);
+    }
     await this.page.waitForTimeout(this.presentation.pauseAfterInputMs);
     await this.spotlight(target, false);
   }
@@ -96,6 +102,16 @@ export class PolicycenterPage extends BasePage {
   // Highlights the Total Premium / Taxes / Total Cost block on the Quote screen while it is validated
   async highlightQuoteTotals(on: boolean): Promise<void> {
     await this.spotlight(this.page.getByText("Total Cost", { exact: true }).first().locator(".."), on);
+  }
+
+  // Highlights the list on the Forms screen while it is validated
+  async highlightFormsList(on: boolean): Promise<void> {
+    await this.spotlight(this.page.locator('[id$="FormsScreen-FormsDV-FormsLV"]').first(), on);
+  }
+
+  // Highlights the JSON on the Message Payload screen while it is validated
+  async highlightMessagePayload(on: boolean): Promise<void> {
+    await this.spotlight(this.page.getByText(/^\s*\[?\{"id"/).last(), on);
   }
 
   async goto(url?: string): Promise<void> {
@@ -219,6 +235,19 @@ export class PolicycenterPage extends BasePage {
     await (await this.el("firstRecentAccount",
       this.page.locator('#TabBar-AccountTab-0-accountItem'),
       this.page.locator('[id^="TabBar-AccountTab-"][id$="-accountItem"]').first())).click();
+  }
+
+  // Account tab > "Account #" search box: opens the account's summary page
+  async openAccountByNumber(accountNumber: string): Promise<void> {
+    await (await this.el("accountTab.expand",
+      this.page.locator('#TabBar-AccountTab .gw-action--expand-button'),
+      this.page.locator('[id^="TabBar-AccountTab"] [class*="expand"]').first())).click();
+    const box = await this.el("accountTab.accountSearch",
+      this.page.locator('#TabBar-AccountTab-AccountTab_AccountNumberSearchItem input'),
+      this.page.locator('[id^="TabBar-AccountTab"] input').first());
+    await box.fill(accountNumber);
+    await box.press("Enter");
+    await expect(this.page.getByRole("main")).toContainText(new RegExp(`Account No\\s*${accountNumber}`));
   }
 
   async openActions(): Promise<void> {
@@ -368,6 +397,22 @@ export class PolicycenterPage extends BasePage {
 
   async setTowingAndLaborSelected(selected: boolean): Promise<void> {
     await this.setCheckbox(await this.perVehicleCoverageCheckbox(2), selected);
+  }
+
+  // Reads the coverage checkbox on PA Coverages: "line" coverages by name, "vehicle" coverages by their row
+  async isCoverageSelected(coverage: string, level: "line" | "vehicle"): Promise<boolean> {
+    let box: Locator;
+    if (level === "vehicle") {
+      const index = VEHICLE_COVERAGE_INDEX[coverage];
+      if (index === undefined) throw new Error(`Unknown vehicle coverage "${coverage}"`);
+      box = await this.perVehicleCoverageCheckbox(index);
+    } else {
+      const index = await this.liabilityRowIndex(coverage);
+      box = await this.el(`liability.${coverage}.checkbox`,
+        this.liabilityRowLocator(index, "_checkbox_checkboxDiv"),
+        this.page.locator(`[id*="PALiabCategoryIterator-${index}-CoverageInputSet"] [role="checkbox"]`).first());
+    }
+    return (await box.getAttribute("aria-checked")) === "true";
   }
 
   // All-vehicle coverages (liability iterator). The row order changes with the policy state (NY vs CA),
@@ -617,7 +662,10 @@ export class PolicycenterPage extends BasePage {
 
   // --- Administration > Monitoring > Message Queues > AppEvents ---
   async openMessageQueues(): Promise<void> {
-    // At 1280px wide PolicyCenter collapses Utility/Administration behind the hamburger menu; widen so the tab bar shows them
+    // At 1280px wide PolicyCenter collapses Utility/Administration behind the hamburger menu; widen so the tab bar shows them.
+    // Only for this navigation: in headed mode a 1700px page is wider than a laptop window, which cuts off the right side
+    // of every later screen (and the validation banner), so the original size is restored once Message Queues is open.
+    const originalViewport = this.page.viewportSize();
     await this.page.setViewportSize({ width: 1700, height: 900 });
     await (await this.el("admin.expand",
       this.page.locator('#TabBar-AdminTab > .gw-action--expand-button'),
@@ -629,6 +677,7 @@ export class PolicycenterPage extends BasePage {
       this.page.locator('#TabBar-AdminTab-Admin_Monitoring-Monitoring_MessagingDestinationControlList'),
       this.page.getByText('Message Queues', { exact: true }))).click();
     await this.page.getByText("AppEvents", { exact: true }).waitFor({ state: "visible" });
+    if (originalViewport) await this.page.setViewportSize(originalViewport);
   }
 
   async openAppEventsDestination(): Promise<void> {
@@ -653,6 +702,66 @@ export class PolicycenterPage extends BasePage {
     await accountLink.click();
     await this.page.getByText(`Account Number: ${accountNumber}`).waitFor({ state: "visible" });
     return accountNumber;
+  }
+
+  // Clicks the given account in Detailed Statistics (the list can span several pages)
+  async openUnfinishedAccount(accountNumber: string): Promise<void> {
+    const link = this.page.getByText(accountNumber, { exact: true });
+    const nextPage = this.page.locator('[id$="MessageControlForDestinationListLV-_ListPaging-next"]');
+    const pagingToolbar = nextPage.locator('xpath=ancestor::*[@role="toolbar"][1]');
+    // The list refreshes after the Detailed Statistics choice: wait for account rows to show
+    await this.page.getByText(/^[A-Z]?\d{6,}$/).first().waitFor({ state: "visible" });
+    for (;;) {
+      if (await link.count()) break;
+      if (!(await nextPage.count()) || (await nextPage.getAttribute("aria-disabled")) === "true") {
+        throw new Error(`Account ${accountNumber} is not listed under "Accounts with any unfinished messages"`);
+      }
+      const before = (await pagingToolbar.getAttribute("aria-label")) ?? "";
+      await nextPage.click({ force: true });
+      await expect(pagingToolbar).not.toHaveAttribute("aria-label", before);
+    }
+    await link.first().click();
+    await this.page.getByText(`Account Number: ${accountNumber}`).waitFor({ state: "visible" });
+  }
+
+  // The account's messages are listed in ascending Order, 40 per page, and the list cannot be re-sorted.
+  // Opens the message before the last one (second-highest Order) and returns its Order and Event Name.
+  async openMessageBeforeLast(): Promise<{ order: string; eventName: string }> {
+    const prefix = "MessageControlForSOOList-MessageControlForSOOListScreen-MessageControlForSOOListLV-";
+    const names = this.page.locator(`[id^="${prefix}"][id$="-MessageName"]`);
+    const orders = this.page.locator(`[id^="${prefix}"][id$="-Order"]`);
+    const pagingToolbar = this.page.locator(`[id="${prefix}_ListPaging"]`);
+    await names.first().waitFor({ state: "visible" });
+    const goTo = async (button: "last" | "prev") => {
+      const btn = this.page.locator(`[id="${prefix}_ListPaging-${button}"]`);
+      if (!(await btn.count()) || (await btn.getAttribute("aria-disabled")) === "true") return false;
+      const before = (await pagingToolbar.getAttribute("aria-label")) ?? "";
+      await btn.click({ force: true });
+      await expect(pagingToolbar).not.toHaveAttribute("aria-label", before);
+      return true;
+    };
+    await goTo("last");
+    let index = (await names.count()) - 2;
+    if (index < 0) {
+      // Only one message on the last page: the one before it is the last row of the previous page
+      if (!(await goTo("prev"))) throw new Error("The account has fewer than two messages");
+      index = (await names.count()) - 1;
+    }
+    const order = (await orders.nth(index).innerText()).trim();
+    const eventName = (await names.nth(index).innerText()).trim();
+    await names.nth(index).click();
+    await this.page.getByRole("heading", { name: "Message Payload" }).waitFor({ state: "visible" });
+    return { order, eventName };
+  }
+
+  // The account number shown on the Account Summary page ("Account No")
+  async readAccountNumber(): Promise<string> {
+    const label = this.page.getByText("Account No", { exact: true }).first();
+    await label.waitFor({ state: "visible" });
+    const text = await this.page.getByRole("main").innerText();
+    const m = text.match(/Account No\s+(\d{6,})/);
+    if (!m) throw new Error("Account number not found on the Account Summary page");
+    return m[1];
   }
 
   async openMessageEvent(eventName: string): Promise<void> {
