@@ -8,6 +8,9 @@
     "report:html": "playwright show-report",
     "test:rating": "PRESENTATION=off playwright test tests/tc00010-rating.spec.ts --project=chromium --reporter=list,html",
     "test:rating:demo": "playwright test tests/tc00010-rating.spec.ts --project=chromium --headed --workers=1 --reporter=list,html",
+    "rating:preview": "playwright test tests/tc00010-rating-preview.spec.ts --project=chromium --reporter=list",
+    "test:rating:calc": "PRESENTATION=off playwright test tests/tc00010-rating-calculated.spec.ts --project=chromium --reporter=list,html",
+    "test:rating:calc:demo": "playwright test tests/tc00010-rating-calculated.spec.ts --project=chromium --headed --workers=1 --reporter=list,html",
     "test:forms": "PRESENTATION=off playwright test tests/tc00011-forms.spec.ts --project=chromium --reporter=list,html",
     "test:forms:demo": "playwright test tests/tc00011-forms.spec.ts --project=chromium --headed --workers=1 --reporter=list,html",
     "test:claim": "playwright test tests/tc00009-claim-creation.spec.ts --project=chromium --workers=1 --reporter=list,html"

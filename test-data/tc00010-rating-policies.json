@@ -1,0 +1,109 @@
+{
+  "testCaseId": "TC00010",
+  "title": "Personal Auto rating: expected premiums calculated from the rate book for every policy below",
+  "notes": [
+    "Each entry in policies is quoted in PolicyCenter and validated against the rating engine (utils/paRatingEngine.ts), which rates it with the tables in test-data/rating/pa-rate-book.json.",
+    "No expected amount is stored here. Change any input (UW company, vehicle cost, driver ages, limits, deductibles, dates...) and the expected premiums follow.",
+    "Preview the calculation without opening PolicyCenter: npm run rating:preview",
+    "Run one policy only: npx playwright test tests/tc00010-rating-calculated.spec.ts --project=chromium -g \"TC00010-02\"",
+    "rating holds facts the rating needs that are not typed into the UI: garaging ZIP, vehicle type, transaction type and multi-car factor.",
+    "Coverage value is the text picked in the UI; the rate-book term value is the same text without commas unless ratingValue is given. Coverage names must match rate-book coverages[].name.",
+    "Set enabled to false to skip a policy."
+  ],
+  "presentation": {
+    "enabled": true,
+    "typingDelayMs": 120,
+    "pauseAfterInputMs": 600,
+    "pauseAfterValidationMs": 5000
+  },
+  "policies": [
+    {
+      "id": "TC00010-01",
+      "title": "CA, Medium Hazard, $28,000 car, youthful driver, 25/50/25; edit removes Mexico Coverage",
+      "enabled": true,
+      "policy": {
+        "termType": "Annual",
+        "effectiveDate": "12/01/2026",
+        "expirationDate": "12/01/2027",
+        "uwCompany": "Acme Medium Hazard Insurance",
+        "state": "California"
+      },
+      "rating": { "garagingZip": "95814", "vehicleType": "Passenger/Light Truck", "transactionType": "New Business", "multiCarDiscount": 1 },
+      "drivers": [
+        { "type": "existing", "name": "John Smith", "age": 46, "percent": "70" },
+        {
+          "type": "new", "name": "Emma Smith", "age": 19, "percent": "30",
+          "firstName": "Emma", "lastName": "Smith", "dateOfBirth": "06/15/2007",
+          "licenseNumber": "D1234567", "licenseState": "California", "yearFirstLicensed": "2023",
+          "addressLine1": "1021 O Street", "city": "Sacramento", "state": "California", "zip": "95814", "addressType": "Home"
+        }
+      ],
+      "vehicle": {
+        "vin": "1234567890ABCDEFG", "year": "2023", "make": "Toyota", "model": "Avalon", "costNew": "28000",
+        "licenseState": "California", "garagedAt": "2: 1021 O Street, Sacramento, CA",
+        "primaryUse": "Pleasure", "passiveRestraint": "No", "antiTheft": "None"
+      },
+      "coverages": [
+        { "coverage": "Liability - Bodily Injury and Property Damage", "selected": true, "value": "25/50/25" },
+        { "coverage": "Medical Payments", "selected": true, "value": "10,000" },
+        { "coverage": "Uninsured Motorist - Bodily Injury", "selected": true, "value": "15/30" },
+        { "coverage": "Uninsured Motorist - Property Damage", "selected": true, "note": "California fixes the limit at 3,500" },
+        { "coverage": "Mexico Coverage - Limited", "selected": true, "note": "On by default; removed by the edit" },
+        { "coverage": "Comprehensive", "selected": true, "value": "500" },
+        { "coverage": "Collision", "selected": true, "value": "1,000" },
+        { "coverage": "Towing and Labor", "selected": true, "value": "100" },
+        { "coverage": "Rental Reimbursement", "selected": true, "value": "30 days x 25/day" }
+      ],
+      "edit": {
+        "description": "Edit Policy Transaction: remove Mexico Coverage - Limited, keep every other coverage",
+        "changes": [
+          { "coverage": "Mexico Coverage - Limited", "selected": false }
+        ]
+      }
+    },
+    {
+      "id": "TC00010-02",
+      "title": "CA, Low Hazard, $45,000 car, 100/200/50, UM 25/50, Comp 250 / Collision 1,000, no Mexico; edit lowers the Collision deductible to 500",
+      "enabled": false,
+      "policy": {
+        "termType": "Annual",
+        "effectiveDate": "12/01/2026",
+        "expirationDate": "12/01/2027",
+        "uwCompany": "Acme Low Hazard Insurance",
+        "state": "California"
+      },
+      "rating": { "garagingZip": "95814", "vehicleType": "Passenger/Light Truck", "transactionType": "New Business", "multiCarDiscount": 1 },
+      "drivers": [
+        { "type": "existing", "name": "John Smith", "age": 46, "percent": "70" },
+        {
+          "type": "new", "name": "Emma Smith", "age": 19, "percent": "30",
+          "firstName": "Emma", "lastName": "Smith", "dateOfBirth": "06/15/2007",
+          "licenseNumber": "D1234567", "licenseState": "California", "yearFirstLicensed": "2023",
+          "addressLine1": "1021 O Street", "city": "Sacramento", "state": "California", "zip": "95814", "addressType": "Home"
+        }
+      ],
+      "vehicle": {
+        "vin": "1234567890ABCDEFG", "year": "2023", "make": "Toyota", "model": "Avalon", "costNew": "45000",
+        "licenseState": "California", "garagedAt": "2: 1021 O Street, Sacramento, CA",
+        "primaryUse": "Pleasure", "passiveRestraint": "No", "antiTheft": "None"
+      },
+      "coverages": [
+        { "coverage": "Liability - Bodily Injury and Property Damage", "selected": true, "value": "100/200/50" },
+        { "coverage": "Medical Payments", "selected": true, "value": "25,000" },
+        { "coverage": "Uninsured Motorist - Bodily Injury", "selected": true, "value": "25/50" },
+        { "coverage": "Uninsured Motorist - Property Damage", "selected": true, "note": "California fixes the limit at 3,500" },
+        { "coverage": "Mexico Coverage - Limited", "selected": false },
+        { "coverage": "Comprehensive", "selected": true, "value": "250" },
+        { "coverage": "Collision", "selected": true, "value": "1,000" },
+        { "coverage": "Towing and Labor", "selected": true, "value": "100" },
+        { "coverage": "Rental Reimbursement", "selected": false }
+      ],
+      "edit": {
+        "description": "Edit Policy Transaction: lower the Collision deductible from 1,000 to 500",
+        "changes": [
+          { "coverage": "Collision", "selected": true, "value": "500" }
+        ]
+      }
+    }
+  ]
+}

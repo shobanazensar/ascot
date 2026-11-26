@@ -1,0 +1,195 @@
+{
+  "source": {
+    "workbook": "PA_Rating_Actuarial_Calculator_v2.xlsx",
+    "rateBook": "PA RTM Demo Rating (pa_rtm_demo_rating), Edition 3",
+    "notes": [
+      "Exported from the workbook's rate-table tabs. Edit any value here to test a rate change; the rating engine (utils/paRatingEngine.ts) recalculates every expected amount.",
+      "Lookups follow PolicyCenter matching: a blank key (\"\") is a wildcard, and when several rows match the one matching on more (higher-priority) keys wins.",
+      "settings.writtenPremiumRounding.vehicle is 'up' because PolicyCenter rounds vehicle-level written premium up (Towing 58.16 -> 59, Rental 76.21 -> 77). The workbook's Rating Worksheet column AD rounds to the nearest dollar, so its sample total is 1,595 where PolicyCenter shows 1,597."
+    ]
+  },
+  "settings": {
+    "ratedTermMonths": 6,
+    "writtenPremiumRounding": {
+      "line": "nearest",
+      "vehicle": "up"
+    },
+    "taxRoundToCentsStates": [
+      "FL",
+      "NY"
+    ],
+    "pipNJLiabilityValue": "100K"
+  },
+  "vehicleTypes": {
+    "Passenger/Light Truck": "auto",
+    "Commercial": "Commercial",
+    "Motorcycle": "Motorcycle",
+    "Recreational Vehicle": "RecVeh",
+    "Trailer": "trailer",
+    "Other": "other"
+  },
+  "coverages": [
+    {"code": "PALiabilityCov", "name": "Liability - Bodily Injury and Property Damage", "level": "line", "routine": "standard", "termCode": "PALiability", "secondTermCode": "PAFullLimitedTort"},
+    {"code": "PAMedPayCov", "name": "Medical Payments", "level": "line", "routine": "standard", "termCode": "PAMedLimit"},
+    {"code": "PAUMBICov", "name": "Uninsured Motorist - Bodily Injury", "level": "line", "routine": "standard", "termCode": "PAUMBI"},
+    {"code": "PAUIMBICov", "name": "Underinsured Motorist - Bodily Injury", "level": "line", "routine": "standard", "termCode": "PAUIMBI"},
+    {"code": "PAUMPDCov", "name": "Uninsured Motorist - Property Damage", "level": "line", "routine": "standard", "termCode": "PAUMPDLimit"},
+    {"code": "PAPIP_AR", "name": "Personal Injury Protection - Arkansas", "level": "line", "routine": "standard", "termCode": "PAPIP_AR_WorkLoss"},
+    {"code": "PAPIP_KY", "name": "Personal Injury Protection - Kentucky", "level": "line", "routine": "standard", "termCode": "PAPIPKY_AggLimit"},
+    {"code": "PAPIP_NJ", "name": "Personal Injury Protection - New Jersey", "level": "line", "routine": "pipNJ", "termCode": "PAPIPNJ_MEDsecondary"},
+    {"code": "PALimitedMexicoCov", "name": "Mexico Coverage - Limited", "level": "line", "routine": "flat"},
+    {"code": "PACollisionCov", "name": "Collision", "level": "vehicle", "routine": "standard", "termCode": "PACollDeductible"},
+    {"code": "PACollision_MA_MI_Limited", "name": "Collision - Limited", "level": "vehicle", "routine": "standard"},
+    {"code": "PAComprehensiveCov", "name": "Comprehensive", "level": "vehicle", "routine": "standard", "termCode": "PACompDeductible"},
+    {"code": "PARentalCov", "name": "Rental Reimbursement", "level": "vehicle", "routine": "standard"},
+    {"code": "PATowingLaborCov", "name": "Towing and Labor", "level": "vehicle", "routine": "standard"},
+    {"code": "PAExcessElectronicsCov", "name": "Electronic Equipment", "level": "vehicle", "routine": "standard"},
+    {"code": "PATapeDiscMediaCov", "name": "Tape / Disc Media", "level": "vehicle", "routine": "standard"}
+  ],
+  "tables": {
+    "baseRate": [
+      {"coverage": "PACollisionCov", "state": "", "zip": "", "rate": 93},
+      {"coverage": "PACollisionCov", "state": "CA", "zip": "", "rate": 95},
+      {"coverage": "PACollisionCov", "state": "CA", "zip": "94404", "rate": 85},
+      {"coverage": "PACollisionCov", "state": "CA", "zip": "94404-5063", "rate": 80},
+      {"coverage": "PACollision_MA_MI_Limited", "state": "MA", "zip": "", "rate": 90},
+      {"coverage": "PACollision_MA_MI_Limited", "state": "MI", "zip": "", "rate": 90},
+      {"coverage": "PAComprehensiveCov", "state": "", "zip": "", "rate": 57},
+      {"coverage": "PAExcessElectronicsCov", "state": "", "zip": "", "rate": 20},
+      {"coverage": "PALiabilityCov", "state": "", "zip": "", "rate": 172},
+      {"coverage": "PALimitedMexicoCov", "state": "", "zip": "", "rate": 15},
+      {"coverage": "PAMedPayCov", "state": "", "zip": "", "rate": 1},
+      {"coverage": "PAPIP_AR", "state": "AR", "zip": "", "rate": 1.87},
+      {"coverage": "PAPIP_KY", "state": "KY", "zip": "", "rate": 0.053},
+      {"coverage": "PAPIP_NJ", "state": "NJ", "zip": "", "rate": 0.07},
+      {"coverage": "PARentalCov", "state": "", "zip": "", "rate": 20},
+      {"coverage": "PATapeDiscMediaCov", "state": "", "zip": "", "rate": 15},
+      {"coverage": "PATowingLaborCov", "state": "", "zip": "", "rate": 15},
+      {"coverage": "PAUIMBICov", "state": "", "zip": "", "rate": 14},
+      {"coverage": "PAUMBICov", "state": "", "zip": "", "rate": 41},
+      {"coverage": "PAUMPDCov", "state": "", "zip": "", "rate": 13}
+    ],
+    "coverageFactor": [
+      {"coverage": "", "term": "", "value": "", "state": "", "factor": 1},
+      {"coverage": "PACollisionCov", "term": "PACollDeductible", "value": "250", "state": "", "factor": 1.5},
+      {"coverage": "PACollisionCov", "term": "PACollDeductible", "value": "500", "state": "", "factor": 1},
+      {"coverage": "PACollisionCov", "term": "PACollDeductible", "value": "1000", "state": "", "factor": 0.85},
+      {"coverage": "PACollisionCov", "term": "PACollDeductible", "value": "", "state": "", "factor": 1},
+      {"coverage": "PAComprehensiveCov", "term": "PACompDeductible", "value": "250", "state": "", "factor": 1.5},
+      {"coverage": "PAComprehensiveCov", "term": "PACompDeductible", "value": "500", "state": "", "factor": 1},
+      {"coverage": "PAComprehensiveCov", "term": "PACompDeductible", "value": "1000", "state": "", "factor": 0.85},
+      {"coverage": "PAComprehensiveCov", "term": "PACompDeductible", "value": "", "state": "", "factor": 1},
+      {"coverage": "PALiabilityCov", "term": "PAFullLimitedTort", "value": "", "state": "", "factor": 1},
+      {"coverage": "PALiabilityCov", "term": "PAFullLimitedTort", "value": "full", "state": "", "factor": 3},
+      {"coverage": "PALiabilityCov", "term": "PAFullLimitedTort", "value": "limited", "state": "", "factor": 2},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "15/30/5", "state": "", "factor": 0.75},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "20/40/5", "state": "", "factor": 0.87},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "250/500/100", "state": "", "factor": 3.8},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "50/100/50", "state": "", "factor": 1.7},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "100/200/50", "state": "", "factor": 2.8},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "0/0/10", "state": "", "factor": 0.55},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "15/30/10", "state": "", "factor": 0.84},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "20/40/10", "state": "", "factor": 0.9},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "25/50/10", "state": "", "factor": 10},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "30/60/10", "state": "", "factor": 1.18},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "20/40/15", "state": "", "factor": 0.93},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "25/50/15", "state": "", "factor": 1.03},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "25/50/20", "state": "", "factor": 1.05},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "25/50/25", "state": "", "factor": 1.14},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "25/50/25", "state": "KY", "factor": 1},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "", "state": "", "factor": 0.2},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "100K", "state": "", "factor": 1.6},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "12.5/25/7.5", "state": "", "factor": 0.72},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "1M", "state": "", "factor": 4.5},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "250K", "state": "", "factor": 2.6},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "40K", "state": "", "factor": 0.85},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "500K", "state": "", "factor": 3.6},
+      {"coverage": "PALiabilityCov", "term": "PALiability", "value": "50K", "state": "", "factor": 0.97},
+      {"coverage": "PAMedPayCov", "term": "PAMedLimit", "value": "10000", "state": "", "factor": 50},
+      {"coverage": "PAMedPayCov", "term": "PAMedLimit", "value": "15000", "state": "", "factor": 75},
+      {"coverage": "PAMedPayCov", "term": "PAMedLimit", "value": "20000", "state": "", "factor": 100},
+      {"coverage": "PAMedPayCov", "term": "PAMedLimit", "value": "25000", "state": "", "factor": 125},
+      {"coverage": "PAMedPayCov", "term": "PAMedLimit", "value": "", "state": "", "factor": 0},
+      {"coverage": "PAPIP_AR", "term": "PAPIP_AR_WorkLoss", "value": "false", "state": "AR", "factor": 3.12},
+      {"coverage": "PAPIP_AR", "term": "PAPIP_AR_WorkLoss", "value": "true", "state": "AR", "factor": 3.12},
+      {"coverage": "PAPIP_KY", "term": "PAPIPKY_AggLimit", "value": "10000", "state": "KY", "factor": 1},
+      {"coverage": "PAPIP_KY", "term": "PAPIPKY_AggLimit", "value": "20000", "state": "KY", "factor": 3.06},
+      {"coverage": "PAPIP_KY", "term": "PAPIPKY_AggLimit", "value": "30000", "state": "KY", "factor": 5.51},
+      {"coverage": "PAPIP_KY", "term": "PAPIPKY_AggLimit", "value": "40000", "state": "KY", "factor": 7.97},
+      {"coverage": "PAPIP_KY", "term": "PAPIPKY_AggLimit", "value": "65000", "state": "KY", "factor": 10.42},
+      {"coverage": "PAPIP_KY", "term": "PAPIPKY_AggLimit", "value": "90000", "state": "KY", "factor": 15.32},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_MEDsecondary", "value": "false", "state": "NJ", "factor": 1},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_MEDsecondary", "value": "true", "state": "NJ", "factor": 0.75},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_OTHER_LIMS", "value": "PIPNJ_ADDED1", "state": "NJ", "factor": 3.03},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_OTHER_LIMS", "value": "PIPNJ_ADDED2", "state": "NJ", "factor": 6.04},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_OTHER_LIMS", "value": "PIPNJ_ADDED3", "state": "NJ", "factor": 7.26},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_OTHER_LIMS", "value": "PIPNJ_ADDED4", "state": "NJ", "factor": 9.07},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_OTHER_LIMS", "value": "PIPNJ_ADDED5", "state": "NJ", "factor": 15.71},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_OTHER_LIMS", "value": "PIPNJ_ADDED6", "state": "NJ", "factor": 22.96},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_OTHER_LIMS", "value": "PIPNJ_ADDED7", "state": "NJ", "factor": 27.8},
+      {"coverage": "PAPIP_NJ", "term": "PAPIPNJ_OTHER_LIMS", "value": "PIPNJ_ADDED8", "state": "NJ", "factor": 33.24},
+      {"coverage": "PAUIMBICov", "term": "PAUIMBI", "value": "", "state": "", "factor": 1},
+      {"coverage": "PAUIMBICov", "term": "PAUIMBI", "value": "15/30", "state": "", "factor": 0.75},
+      {"coverage": "PAUIMBICov", "term": "PAUIMBI", "value": "25/50", "state": "", "factor": 1},
+      {"coverage": "PAUIMBICov", "term": "PAUIMBI", "value": "250/500", "state": "", "factor": 3.8},
+      {"coverage": "PAUIMBICov", "term": "PAUIMBI", "value": "50/100", "state": "", "factor": 1.7},
+      {"coverage": "PAUMBICov", "term": "PAUMBI", "value": "", "state": "", "factor": 1},
+      {"coverage": "PAUMBICov", "term": "PAUMBI", "value": "15/30", "state": "", "factor": 0.75},
+      {"coverage": "PAUMBICov", "term": "PAUMBI", "value": "25/50", "state": "", "factor": 1},
+      {"coverage": "PAUMBICov", "term": "PAUMBI", "value": "250/500", "state": "", "factor": 3.8},
+      {"coverage": "PAUMBICov", "term": "PAUMBI", "value": "50/100", "state": "", "factor": 1.7},
+      {"coverage": "PAUMPDCov", "term": "PAUMPDLimit", "value": "25000", "state": "", "factor": 1},
+      {"coverage": "PAUMPDCov", "term": "PAUMPDLimit", "value": "50000", "state": "", "factor": 1.7},
+      {"coverage": "PAUMPDCov", "term": "PAUMPDLimit", "value": "", "state": "", "factor": 1}
+    ],
+    "uwCompany": [
+      {"code": "1111_11111", "name": "Acme Low Hazard Insurance", "state": "", "factor": 0.9},
+      {"code": "2111_11111", "name": "Acme Medium Hazard Insurance", "state": "", "factor": 1},
+      {"code": "3111_33333", "name": "Acme High Hazard Insurance", "state": "", "factor": 1.1}
+    ],
+    "vehicleCost": [
+      {"min": 0, "max": 4500, "state": "", "factor": 0.44},
+      {"min": 4501, "max": 6000, "state": "", "factor": 0.5},
+      {"min": 6001, "max": 8000, "state": "", "factor": 0.65},
+      {"min": 8001, "max": 10000, "state": "", "factor": 0.8},
+      {"min": 10001, "max": 15000, "state": "", "factor": 0.9},
+      {"min": 15001, "max": 20000, "state": "", "factor": 1},
+      {"min": 20001, "max": 25000, "state": "", "factor": 1.2},
+      {"min": 20001, "max": 25000, "state": "KY", "factor": 1.3},
+      {"min": 25001, "max": 40000, "state": "", "factor": 1.5},
+      {"min": 40001, "max": 65000, "state": "", "factor": 2},
+      {"min": 65001, "max": 90000, "state": "", "factor": 3},
+      {"min": 90001, "max": null, "state": "", "factor": 4}
+    ],
+    "vehicleType": [
+      {"state": "", "type": "", "factor": 15},
+      {"state": "CA", "type": "", "factor": 20},
+      {"state": "CA", "type": "auto", "factor": 10}
+    ],
+    "driverAge": [
+      {"min": null, "max": 25, "factor": 1.25},
+      {"min": 26, "max": null, "factor": 1}
+    ],
+    "youthfulDriverAge": [
+      {"state": "", "age": 20}
+    ],
+    "minPremium": [
+      {"coverage": "", "amount": 40},
+      {"coverage": "PACollisionCov", "amount": 10},
+      {"coverage": "PAComprehensiveCov", "amount": 20},
+      {"coverage": "PALiabilityCov", "amount": 30}
+    ],
+    "renewalCap": [
+      {"coverage": "PACollisionCov", "min": null, "max": 250, "amount": null, "percent": 3},
+      {"coverage": "PACollisionCov", "min": 250, "max": 500, "amount": 25, "percent": null},
+      {"coverage": "PAComprehensiveCov", "min": null, "max": 250, "amount": 25, "percent": null},
+      {"coverage": "PAComprehensiveCov", "min": 250, "max": 500, "amount": null, "percent": 10},
+      {"coverage": "PAComprehensiveCov", "min": 500, "max": null, "amount": null, "percent": 8}
+    ],
+    "stateTax": [
+      {"state": "", "rate": 0.055},
+      {"state": "CA", "rate": 0.0725},
+      {"state": "KY", "rate": 0.06}
+    ]
+  }
+}
